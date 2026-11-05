@@ -17,7 +17,7 @@ function toast(m,keep){
   return d;
 }
 
-var loading=toast('Loading 3D engine...',true);
+var loading=toast('Loading 3D engine',true);
 function done(T){
   loading.remove();
   try{init(T);}catch(e){
