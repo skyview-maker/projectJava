@@ -67,7 +67,7 @@ function init(T){
   }
   applyWin();
   var tbar=mk('div','height:34px;flex:none;display:flex;align-items:center;padding:0 8px 0 14px;background:rgb(30,42,66);cursor:move;border-bottom:1px solid rgba(255,255,255,0.12);box-sizing:border-box',null,win);
-  mk('div','flex:1;min-width:0;font:600 13px system-ui,Segoe UI,Arial,sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis','Physics Sandbox',tbar);
+  mk('div','flex:1;min-width:0;font:600 13px system-ui,Segoe UI,Arial,sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis','made by skyview',tbar);
   var bstyle='cursor:pointer;margin-left:6px;padding:3px 10px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;background:rgba(255,255,255,0.08);color:rgb(255,255,255);font:12px system-ui,Segoe UI,Arial,sans-serif';
   var bSound=mk('button',bstyle,'Sound: On',tbar);
   var bReset=mk('button',bstyle,'Reset',tbar);
@@ -681,18 +681,7 @@ function init(T){
     else P.status='Standing';
   }
 
-  /* ---------- HUD ---------- */
-  var hud=mk('div','position:absolute;left:12px;top:12px;padding:9px 14px;background:rgba(10,20,35,0.58);border:1px solid rgba(255,255,255,0.16);border-radius:10px;white-space:pre;pointer-events:none;min-width:210px',null,root);
-  var ch=mk('div','position:absolute;width:0;height:0;pointer-events:none',null,root);
-  [[-12,-1,8,2],[4,-1,8,2],[-1,-12,2,8],[-1,4,2,8],[-1,-1,2,2]].forEach(function(s){
-    mk('div','position:absolute;background:rgba(255,255,255,0.92);box-shadow:0 0 2px rgba(0,0,0,0.9);left:'+s[0]+'px;top:'+s[1]+'px;width:'+s[2]+'px;height:'+s[3]+'px',null,ch);
-  });
-  mk('div','position:absolute;left:0;right:0;bottom:10px;text-align:center;pointer-events:none;font-size:12px;padding:0 8px;color:rgba(255,255,255,0.85);text-shadow:0 1px 3px rgba(0,0,0,0.8)','WASD move   Space jump   Shift sprint   Click shoot   R reset   M mute   Esc free mouse',root);
-  var wrap=mk('div','position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none',null,root);
-  var card=mk('div','pointer-events:auto;cursor:pointer;padding:22px 30px;border-radius:14px;background:rgba(10,20,35,0.78);border:1px solid rgba(255,255,255,0.22);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.45)',null,wrap);
-  mk('div','font:600 26px system-ui,Segoe UI,Arial,sans-serif;margin-bottom:10px','Physics Sandbox',card);
-  mk('div','white-space:pre-line;margin-bottom:14px;color:rgba(255,255,255,0.85)','WASD  move      Space  jump      Shift  sprint\nMouse  look      Left click  shoot a ball\nR  reset      M  mute      Esc  release mouse\nDrag the title bar to move, drag any edge to resize',card);
-  mk('div','font:600 16px system-ui,Segoe UI,Arial,sans-serif;color:rgb(255,200,110)','Click here to play',card);
+
 
   /* ---------- input ---------- */
   var GK={KeyW:1,KeyA:1,KeyS:1,KeyD:1,Space:1,ShiftLeft:1,ShiftRight:1,KeyR:1,KeyM:1,ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1};
