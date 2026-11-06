@@ -70,6 +70,7 @@ function init(T){
   mk('div','flex:1;min-width:0;font:600 13px system-ui,Segoe UI,Arial,sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis','Physics Sandbox',tbar);
   var bstyle='cursor:pointer;margin-left:6px;padding:3px 10px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;background:rgba(255,255,255,0.08);color:rgb(255,255,255);font:12px system-ui,Segoe UI,Arial,sans-serif';
   var bSound=mk('button',bstyle,'Sound: On',tbar);
+  var bPause=mk('button',bstyle,'Pause',tbar);
   var bReset=mk('button',bstyle,'Reset',tbar);
   var bMax=mk('button',bstyle,'Maximize',tbar);
   var bExit=mk('button',bstyle+';background:rgba(200,60,60,0.55)','Close',tbar);
@@ -147,6 +148,7 @@ function init(T){
   tbar.addEventListener('mousedown',startDrag);
   tbar.addEventListener('dblclick',function(e){if(e.target.tagName!=='BUTTON')toggleMax();});
   bMax.onclick=toggleMax;
+  bPause.onclick=function(){togglePauseMenu(!settings.paused);};
   bReset.onclick=function(){reset();sReset();};
   bExit.onclick=function(){destroy();};
   bSound.onclick=function(){audioInit();setMuted(!muted);};
@@ -243,6 +245,7 @@ function init(T){
   var cam=new T.PerspectiveCamera(75,1,0.1,2500);
   cam.rotation.order='YXZ';
   var P={stepPh:0,p:new V3(0,0,9),v:new V3(),yaw:0,pitch:-0.06,ground:true,bob:0,fov:75,status:'Standing',spd:0};
+  var settings={playerBallCollision:false,paused:false};
   var keys={},locked=false,mdown=false,fireT=0;
 
   /* ---------- physics state ---------- */
@@ -565,6 +568,7 @@ function init(T){
       w.y*=Math.max(0,1-1.2*h);
       if(hs<0.05&&w.lengthSq()<0.04){v.x=0;v.z=0;w.set(0,0,0);}
     }
+    if(settings.playerBallCollision)playerBallCollision(b);
     ballCube(b);
   }
 
@@ -641,6 +645,26 @@ function init(T){
       }
     }
   }
+  function playerBallCollision(b){
+    if(!b||!b.p)return;
+    var playerCenter=new V3(P.p.x,P.p.y+0.78,P.p.z);
+    var n=tmp.copy(b.p).sub(playerCenter);
+    var d2=n.lengthSq();
+    var hitR=BR+0.72;
+    if(d2>hitR*hitR)return;
+    var d=Math.sqrt(d2)||0.0001;
+    n.multiplyScalar(1/d);
+    var overlap=hitR-d;
+    if(overlap<=0)return;
+    b.p.addScaledVector(n,overlap);
+    var vn=b.v.dot(n);
+    if(vn<0){
+      var bounce=-(1+0.45)*vn;
+      b.v.addScaledVector(n,bounce);
+      if(-vn>1.1)sBallHit(-vn,b.p);
+    }
+    P.v.addScaledVector(n,0.18);
+  }
   function updatePlayer(dt){
     if(!(dt>0))return;
     var f=((keys.KeyW||keys.ArrowUp)?1:0)-((keys.KeyS||keys.ArrowDown)?1:0);
@@ -687,20 +711,62 @@ function init(T){
   [[-12,-1,8,2],[4,-1,8,2],[-1,-12,2,8],[-1,4,2,8],[-1,-1,2,2]].forEach(function(s){
     mk('div','position:absolute;background:rgba(255,255,255,0.92);box-shadow:0 0 2px rgba(0,0,0,0.9);left:'+s[0]+'px;top:'+s[1]+'px;width:'+s[2]+'px;height:'+s[3]+'px',null,ch);
   });
-  mk('div','position:absolute;left:0;right:0;bottom:10px;text-align:center;pointer-events:none;font-size:12px;padding:0 8px;color:rgba(255,255,255,0.85);text-shadow:0 1px 3px rgba(0,0,0,0.8)','WASD move   Space jump   Shift sprint   Click shoot   R reset   M mute   Esc free mouse',root);
+  mk('div','position:absolute;left:0;right:0;bottom:10px;text-align:center;pointer-events:none;font-size:12px;padding:0 8px;color:rgba(255,255,255,0.85);text-shadow:0 1px 3px rgba(0,0,0,0.8)','WASD move   Space jump   Shift sprint   Click shoot   R reset   M mute   Esc pause',root);
   var wrap=mk('div','position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none',null,root);
   var card=mk('div','pointer-events:auto;cursor:pointer;padding:22px 30px;border-radius:14px;background:rgba(10,20,35,0.78);border:1px solid rgba(255,255,255,0.22);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.45)',null,wrap);
   mk('div','font:600 26px system-ui,Segoe UI,Arial,sans-serif;margin-bottom:10px','Physics Sandbox',card);
-  mk('div','white-space:pre-line;margin-bottom:14px;color:rgba(255,255,255,0.85)','WASD  move      Space  jump      Shift  sprint\nMouse  look      Left click  shoot a ball\nR  reset      M  mute      Esc  release mouse\nDrag the title bar to move, drag any edge to resize',card);
+  mk('div','white-space:pre-line;margin-bottom:14px;color:rgba(255,255,255,0.85)','WASD  move      Space  jump      Shift  sprint\nMouse  look      Left click  shoot a ball\nR  reset      M  mute      Esc  pause menu\nDrag the title bar to move, drag any edge to resize',card);
   mk('div','font:600 16px system-ui,Segoe UI,Arial,sans-serif;color:rgb(255,200,110)','Click here to play',card);
 
+  var pauseMenu=mk('div','position:absolute;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(5,10,18,0.62);backdrop-filter:blur(2px);z-index:20',null,root);
+  var pausePanel=mk('div','width:min(440px,88%);background:rgba(10,20,35,0.94);border:1px solid rgba(255,255,255,0.14);border-radius:16px;padding:18px 20px;box-shadow:0 25px 60px rgba(0,0,0,0.45)',null,pauseMenu);
+  mk('div','font:700 30px system-ui,Segoe UI,Arial,sans-serif;margin:0 0 14px;color:#eef6ff','Pause Menu',pausePanel);
+  var pauseContent=mk('div','display:grid;gap:12px',null,pausePanel);
+  var pauseButtons=mk('div','display:flex;gap:10px;justify-content:flex-end;margin-top:4px',null,pauseContent);
+  var resumeBtn=mk('button','border:1px solid rgba(255,255,255,0.18);border-radius:10px;background:rgba(90,199,255,0.16);color:#eef8ff;padding:9px 14px;cursor:pointer;font:600 13px system-ui,Segoe UI,Arial,sans-serif','Resume',pauseButtons);
+  var settingsBtn=mk('button','border:1px solid rgba(255,255,255,0.18);border-radius:10px;background:rgba(255,255,255,0.04);color:#eef8ff;padding:9px 14px;cursor:pointer;font:600 13px system-ui,Segoe UI,Arial,sans-serif','Settings',pauseButtons);
+  var resetBtn=mk('button','border:1px solid rgba(255,255,255,0.18);border-radius:10px;background:rgba(255,255,255,0.04);color:#eef8ff;padding:9px 14px;cursor:pointer;font:600 13px system-ui,Segoe UI,Arial,sans-serif','Reset',pauseButtons);
+  var settingsPanel=mk('div','display:none;gap:12px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)',null,pauseContent);
+  var collisionLabel=mk('label','display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#edf6ff;font:600 14px system-ui,Segoe UI,Arial,sans-serif',null,settingsPanel);
+  mk('span','flex:1','Balls collide with player',collisionLabel);
+  var collisionToggle=mk('input','accent-color:#7ad3ff;transform:scale(1.2);cursor:pointer',null,collisionLabel);
+  collisionToggle.type='checkbox';
+  collisionToggle.checked=settings.playerBallCollision;
+  collisionToggle.addEventListener('change',function(){settings.playerBallCollision=collisionToggle.checked;});
+  function syncPauseMenu(){
+    pauseMenu.style.display=settings.paused?'flex':'none';
+    bPause.textContent=settings.paused?'Resume':'Pause';
+    collisionToggle.checked=settings.playerBallCollision;
+    settingsPanel.style.display=settings.paused&&settingsPanel.dataset.open==='1'?'grid':'none';
+  }
+  function togglePauseMenu(force){
+    var next=typeof force==='boolean'?force:!settings.paused;
+    settings.paused=next;
+    syncPauseMenu();
+    if(settings.paused){
+      keys={};mdown=false;
+      if(document.pointerLockElement)document.exitPointerLock();
+    }else if(!locked){
+      wrap.style.display='flex';
+    }
+  }
+  settingsBtn.onclick=function(){
+    settingsPanel.dataset.open=settingsPanel.dataset.open==='1'?'0':'1';
+    settingsPanel.style.display=settingsPanel.dataset.open==='1'?'grid':'none';
+  };
+
   /* ---------- input ---------- */
-  var GK={KeyW:1,KeyA:1,KeyS:1,KeyD:1,Space:1,ShiftLeft:1,ShiftRight:1,KeyR:1,KeyM:1,ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1};
+  var GK={KeyW:1,KeyA:1,KeyS:1,KeyD:1,Space:1,ShiftLeft:1,ShiftRight:1,KeyR:1,KeyM:1,Escape:1,ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1};
   function lock(){
     audioInit();
     try{var pr=cvs.requestPointerLock();if(pr&&pr.catch)pr.catch(function(){});}catch(e){}
   }
   function onKD(e){
+    if(e.code==='Escape'&&!e.repeat){
+      e.preventDefault();e.stopImmediatePropagation();
+      togglePauseMenu(!settings.paused);
+      return;
+    }
     if(!locked||!GK[e.code]||e.ctrlKey||e.metaKey||e.altKey)return;
     e.preventDefault();e.stopImmediatePropagation();
     keys[e.code]=true;
@@ -714,7 +780,7 @@ function init(T){
   }
   function onBlur(){keys={};mdown=false;}
   function onMM(e){
-    if(!locked)return;
+    if(!locked||settings.paused)return;
     var mx=e.movementX||0,my=e.movementY||0;
     if(Math.abs(mx)>400||Math.abs(my)>400)return;
     P.yaw-=mx*0.0022;
@@ -723,16 +789,18 @@ function init(T){
     if(P.pitch<-1.55)P.pitch=-1.55;
   }
   function onMD(e){
-    if(!locked)return;
+    if(!locked||settings.paused)return;
     if(e.button===0){mdown=true;fireT=0.16;shoot();}
   }
   function onMU(e){if(e.button===0)mdown=false;}
   function onPL(){
     locked=(document.pointerLockElement===cvs);
-    wrap.style.display=locked?'none':'flex';
+    wrap.style.display=(locked||settings.paused)?'none':'flex';
     cvs.style.cursor=locked?'none':'default';
-    if(!locked){keys={};mdown=false;}
+    if(!locked&&!settings.paused){keys={};mdown=false;}
   }
+  resumeBtn.onclick=function(){togglePauseMenu(false);lock();};
+  resetBtn.onclick=function(){reset();sReset();togglePauseMenu(false);};
   function fit(){
     var w=root.clientWidth||WR.w,h=root.clientHeight||Math.max(50,WR.h-34);
     R.setSize(w,h);
@@ -766,14 +834,16 @@ function init(T){
     if(dt>0.05)dt=0.05;
     fCount++;fTime+=dt;
     if(fTime>=0.5){fps=Math.round(fCount/fTime);fCount=0;fTime=0;}
-    updatePlayer(dt);
-    if(mdown&&locked){fireT-=dt;if(fireT<=0){shoot();fireT=0.16;}}
-    if(dt>0){
-      var n=Math.min(12,Math.ceil(dt/DT)),h=dt/n,i;
-      for(i=0;i<n;i++)physics(h);
+    if(!settings.paused){
+      updatePlayer(dt);
+      if(mdown&&locked){fireT-=dt;if(fireT<=0){shoot();fireT=0.16;}}
+      if(dt>0){
+        var n=Math.min(12,Math.ceil(dt/DT)),h=dt/n,i;
+        for(i=0;i<n;i++)physics(h);
+      }
+      updateFx(dt);
+      updateSlide();
     }
-    updateFx(dt);
-    updateSlide();
     var i2,b;
     for(i2=balls.length-1;i2>=0;i2--){
       b=balls[i2];
